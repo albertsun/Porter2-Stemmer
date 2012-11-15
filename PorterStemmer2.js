@@ -16,6 +16,12 @@ var stemmer = (function(){
     console.log(Array.prototype.slice.call(arguments).join(' '));
   }
 
+  var Porter_RegExp = {
+    create: function(parts) {
+      return new RegExp(parts.join("|"));
+    }
+  };
+
   // Now we start a copy-paste job in the comments, directly
   // from the specifications with the following exceptions:
   //
@@ -57,7 +63,7 @@ var stemmer = (function(){
     R1_and_R2 = new RegExp(vowel + non_vowel + "(.*)$", "g"),
     
     get_region = function(word) {
-      var res = R1_and_R2.match(word);
+      var res = R1_and_R2.exec(word);
       return res ? res[1] : "";
     },
 
@@ -77,6 +83,7 @@ var stemmer = (function(){
   function Word(init) {
     String.call(this, init);
   }
+  Word.prototype = String.prototype;
 
   Word.prototype.toString = function() {
     return this.word;
@@ -162,15 +169,15 @@ var stemmer = (function(){
     var 
       len = set.length,
       res,
+      ix;
       set.sort(function(a, b) {
         return b[0].toString().length - a[0].toString().length;
-      }),
-      ix;
+      });
 
     for(ix = 0; ix < len; ix++) {
       res = set[0].exec(word);
       if(res !== null) {
-        return word.substr(0, res.index) + set[1];
+        return word.substr(0, res.index) + set[1]; // TK: wtf is res.index do?
       }
     }
 
@@ -183,11 +190,11 @@ var stemmer = (function(){
 
     // If the word has two letters or less, leave it as it is. 
     var two_letters_or_less = new RegExp("^" + letter + "{1,2}$"),
-        word = Word(raw_word);
+        word = new Word(raw_word);
 
     if (two_letters_or_less.test(word)) {
       debugFunction(
-        "If the word has two letters or less, leave it as it is."
+        "If the word has two letters or less, leave it as it is.",
         two_letters_or_less,
         word
       );
@@ -266,8 +273,11 @@ var stemmer = (function(){
 
     // Step 1b:
     // Search for the longest among the following suffixes, and perform the action indicated. 
-    word = R1(word, longest_suffix
-    R1 = longest_suffix(
+    // R1 = longest_suffix(R1,[
+
+    // ]);
+    // word = R1(word, longest_suffix);
+    // R1 = longest_suffix(
     // eed   eedly+
     // replace by ee if in R1 
     //
@@ -373,7 +383,7 @@ var stemmer = (function(){
     // Search for the longest among the following suffixes, and, 
     // if found and in R2, perform the action indicated.
     R2 = R2.replace(/^(.+?)(al|ance|ence|er|ic|able|ible|ant|ement|ment|ent|ou|ism|ate|iti|ous|ive|ize|sion|tion)$/, "$1");
-    
+  };
 
   return function (w, debug) {
     var
@@ -629,5 +639,5 @@ var stemmer = (function(){
       }
 
       return w;
-  }
+  };
 })();
