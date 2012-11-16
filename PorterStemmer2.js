@@ -13,7 +13,8 @@ var stemmer = (function(){
   function dummyDebug() {}
 
   function realDebug() {
-    console.log(Array.prototype.slice.call(arguments).join(' '));
+    // console.log(Array.prototype.slice.call(arguments).join(' '));
+    console.log(arguments);
   }
 
   var Porter_RegExp = {
@@ -83,20 +84,24 @@ var stemmer = (function(){
   function Word(init) {
     this.word = String.call(this, init);
   }
-  // Word.prototype = String.prototype;
 
+  Word.prototype.toString = function() {
+    return this.word;
+  }
   Word.prototype.replace = function(a1,a2) {
-    this.word.replace(a1,a2);
-    return this;
+    return new Word(this.word.replace(a1,a2));
   }
   Word.prototype.charAt = function(num) {
     return this.word.charAt(num);
   }
-  Word.prototype.toString = function() {
-    return this.word;
-  }
   Word.prototype.match = function(regex) {
     return this.word.match(regex);
+  }
+  Word.prototype.slice = function(beginslice, endslice) {
+    return new Word(this.word.slice(beginslice, endslice));
+  }
+  Word.prototype.substr = function(start,length) {
+    return new Word(this.word.substr(start,length));
   }
 
   Word.prototype.decompose = function() {
@@ -176,19 +181,20 @@ var stemmer = (function(){
 
   // Assume that 
   function longest_suffix(word, set) {
-    console.log(word,set);
+    // console.log(word,set);
     var 
       len = set.length,
       res,
       ix;
-      set.sort(function(a, b) {
-        return b[0].toString().length - a[0].toString().length;
-      });
+      // set.sort(function(a, b) {
+        // return b[0].toString().length - a[0].toString().length;
+      // });
 
     for(ix = 0; ix < len; ix++) {
-      res = set[0].exec(word);
+      res = set[ix][0].exec(word);
       if(res !== null) {
-        return word.substr(0, res.index) + set[1]; // TK: wtf is res.index do?
+        // return word.substr(0, res.index) + set[ix][1];
+        return word.replace(set[ix][0], set[ix][1]);
       }
     }
 
@@ -198,11 +204,19 @@ var stemmer = (function(){
 
   // Implementors note: This is the start of the machinery
   return function (raw_word, debug) {
-    console.log(raw_word);
+
+    if (debug) {
+      debugFunction = realDebug;
+    } else {
+      debugFunction = dummyDebug;
+    }
+
     // If the word has two letters or less, leave it as it is. 
     var two_letters_or_less = new RegExp("^" + letter + "{1,2}$"),
         word = new Word(raw_word);
-    console.log(word.toString());
+    debugFunction(word.toString());
+
+
     if (two_letters_or_less.test(word)) {
       debugFunction(
         "If the word has two letters or less, leave it as it is.",
@@ -221,7 +235,7 @@ var stemmer = (function(){
     }
 
     // Set initial y, or y after a vowel, to Y
-    word = word.replace(/y/, 'Y');
+    word = word.replace(/^y/, 'Y');
     word = word.replace(/([aeiouy])y/, "$1Y");
 
     
@@ -252,12 +266,13 @@ var stemmer = (function(){
     //
     // and remove if found.
     //
-
     word = longest_suffix(word, [
       [/'s'$/, "", 3],
       [/'s$/, "", 2],
       [/'$/, "", 1]
     ]);
+    debugFunction("after step 0", word.toString());
+
 
     // Step 1a:
     // Search for the longest among the following suffixes, and perform 
@@ -284,6 +299,7 @@ var stemmer = (function(){
         // Implementors note: vowel + something else + s
         [ /([aeiouy].+)s$/, "$1", 1 ]
     ]);
+    debugFunction("after step 1a", word.toString());
 
     // Step 1b:
     // Search for the longest among the following suffixes, and perform the action indicated. 
@@ -364,8 +380,9 @@ var stemmer = (function(){
       [/lessli$/, "less"],
 
       //  li+:   delete if preceded by a valid li-ending
-      ["(?:" + li_ending + ")li", ""]
+      [/(?:" + li_ending + ")li/, ""]
     ]);
+    debugFunction("after step 2", word.toString());
 
     // Step 3:
     // Search for the longest among the following suffixes, 
@@ -392,266 +409,14 @@ var stemmer = (function(){
       // ative*:   delete if in R2
       [/ative$/, ""]
     ]);
+    debugFunction("after step 3", word.toString());
    
     // Step 4
     // Search for the longest among the following suffixes, and, 
     // if found and in R2, perform the action indicated.
     R2 = R2.replace(/^(.+?)(al|ance|ence|er|ic|able|ible|ant|ement|ment|ent|ou|ism|ate|iti|ous|ive|ize|sion|tion)$/, "$1");
+  
+    return word.toString();  
   };
 
-  return function (w, debug) {
-    var
-      stem,
-      suffix,
-      firstch,
-      re,
-      re2,
-      re3,
-      re4,
-      debugFunction,
-      origword = w;
-
-    if (debug) {
-      debugFunction = realDebug;
-    } else {
-      debugFunction = dummyDebug;
-    }
-
-    if (w.length < 3) { return w; }
-
-    firstch = w.substr(0,1);
-    if (firstch == "y") {
-      w = firstch.toUpperCase() + w.substr(1);
-    }
-
-    // Step 1a
-    re = /^(.+?)(ss|i)es$/;
-    re2 = /^(.+?)([^s])s$/;
-
-    if (re.test(w)) { 
-      w = w.replace(re,"$1$2"); 
-      debugFunction('1a',re, w);
-
-    } else if (re2.test(w)) {
-      w = w.replace(re2,"$1$2"); 
-      debugFunction('1a',re2, w);
-    }
-
-    // Step 1b
-    re = /^(.+?)eed$/;
-    re2 = /^(.+?)(ed|ing)$/;
-    if (re.test(w)) {
-      var fp = re.exec(w);
-      re = new RegExp(mgr0);
-      if (re.test(fp[1])) {
-        re = /.$/;
-        w = w.replace(re,"");
-        debugFunction('1b',re, w);
-      }
-    } else if (re2.test(w)) {
-      var fp = re2.exec(w);
-      stem = fp[1];
-      re2 = new RegExp(s_v);
-      if (re2.test(stem)) {
-        w = stem;
-        debugFunction('1b', re2, w);
-
-        re2 = /(at|bl|iz)$/;
-        re3 = new RegExp("([^aeiouylsz])\\1$");
-        re4 = new RegExp("^" + C + v + "[^aeiouwxy]$");
-
-        if (re2.test(w)) { 
-          w = w + "e"; 
-          debugFunction('1b', re2, w);
-
-        } else if (re3.test(w)) { 
-          re = /.$/; 
-          w = w.replace(re,""); 
-          debugFunction('1b', re3, w);
-
-        } else if (re4.test(w)) { 
-          w = w + "e"; 
-          debugFunction('1b', re4, w);
-        }
-      }
-    }
-
-    // Step 1c
-    re = new RegExp("^(.*" + v + ".*)y$");
-    if (re.test(w)) {
-      var fp = re.exec(w);
-      stem = fp[1];
-      w = stem + "i";
-      debugFunction('1c', re, w);
-    }
-
-    // Step 2
-    re = /^(.+?)(ational|tional|enci|anci|izer|bli|alli|entli|eli|ousli|ization|ation|ator|alism|iveness|fulness|ousness|aliti|iviti|biliti|logi)$/;
-    if (re.test(w)) {
-      var fp = re.exec(w);
-      stem = fp[1];
-      suffix = fp[2];
-      re = new RegExp(mgr0);
-      if (re.test(stem)) {
-        w = stem + step2list[suffix];
-        debugFunction('2', re, w);
-      }
-    }
-
-    // Step 3
-    re = /^(.+?)(icate|ative|alize|iciti|ical|ful|ness)$/;
-    if (re.test(w)) {
-      var fp = re.exec(w);
-      stem = fp[1];
-      suffix = fp[2];
-      re = new RegExp(mgr0);
-      if (re.test(stem)) {
-        w = stem + step3list[suffix];
-        debugFunction('3', re, w);
-      }
-    }
-
-    // Step 4
-    re = /^(.+?)(al|ance|ence|er|ic|able|ible|ant|ement|ment|ent|ou|ism|ate|iti|ous|ive|ize)$/;
-    re2 = /^(.+?)(s|t)(ion)$/;
-    if (re.test(w)) {
-      var fp = re.exec(w);
-      stem = fp[1];
-      re = new RegExp(mgr1);
-      if (re.test(stem)) {
-        w = stem;
-        debugFunction('4', re, w);
-      }
-    } else if (re2.test(w)) {
-      var fp = re2.exec(w);
-      stem = fp[1] + fp[2];
-      re2 = new RegExp(mgr1);
-      if (re2.test(stem)) {
-        w = stem;
-        debugFunction('4', re2, w);
-      }
-    }
-
-    // Step 5
-    re = /^(.+?)e$/;
-    if (re.test(w)) {
-      var fp = re.exec(w);
-      stem = fp[1];
-      re = new RegExp(mgr1);
-      re2 = new RegExp(meq1);
-      re3 = new RegExp("^" + C + v + "[^aeiouwxy]$");
-      if (re.test(stem) || (re2.test(stem) && !(re3.test(stem)))) {
-        w = stem;
-        debugFunction('5', re, re2, re3, w);
-      }
-    }
-
-    re = /ll$/;
-    re2 = new RegExp(mgr1);
-    if (re.test(w) && re2.test(w)) {
-      re = /.$/;
-      w = w.replace(re,"");
-      debugFunction('5', re, re2, w);
-    }
-
-    // and turn initial Y back to y
-    if (firstch == "y") {
-      w = firstch.toLowerCase() + w.substr(1);
-    }
-
-    // If the words begins gener, commun or arsen, set R1 to be the remainder of the word. 
-    //
-    // Stem certain special words as follows, 
-    var specialWords = {
-
-    // skis   ->  ski
-      "skis" : "ski",
-
-    // skies  ->  sky
-      "skies" : "sky",
-
-    // dying      die
-      "dying" : "die",
-
-    // lying      lie
-      "lying" : "lie",
-
-    // tying  ->  tie 
-      "tying" : "tie",
-
-    // idly   ->  idl
-      "idly" : "idl",
-
-    // gently     gentl 
-      "gently" : "gentl",
-
-    // ugly       ugli 
-      "ugly" : "ugli",
-
-    // early      earli 
-      "early": "earli",
-
-    // only       onli 
-      "only": "onli",
-
-    // singly -> singl
-      "singly": "singl"
-    }, emptyObject = {};
-
-    if(specialWords[origword] !== emptyObject[origword]){
-      w = specialWords[origword];
-      debugFunction('Special Word', w);
-    }
-
-    // If one of the following is found, leave it invariant, 
-    // sky 
-    // news 
-    // howe
-    // atlas        cosmos        bias        andes
-
-
-    if( "sky news howe atlas cosmos bias andes" 
-    // Following step 1a, leave the following invariant, 
-    //
-    // inning         outing        canning         herring         earring
-    // proceed        exceed        succeed
-       + "inning outing canning herring earring proceed exceed succeed".indexOf(origword) !== -1 ){
-      word = origword;
-      debugFunction('Special Word', w);
-    }
-
-      // Address words overstemmed as gener-
-      re = /.*generate?s?d?(ing)?$/;
-      if( re.test(origword) ){
-        w = w + 'at';
-        debugFunction('Overstemmed', w);
-      }
-
-      re = /.*general(ly)?$/;
-      if( re.test(origword) ){
-        w = w + 'al';
-        debugFunction('Overstemmed', w);
-      }
-
-      re = /.*generic(ally)?$/;
-      if( re.test(origword) ){
-        w = w + 'ic';
-        debugFunction('Overstemmed', w);
-      }
-
-      re = /.*generous(ly)?$/;
-      if( re.test(origword) ){
-        w = w + 'ous';
-        debugFunction('Overstemmed', w);
-      }
-
-      // Address words overstemmed as commun-
-      re = /.*communit(ies)?y?/;
-      if( re.test(origword) ){
-        w = w + 'iti';
-        debugFunction('Overstemmed', w);
-      }
-
-      return w;
-  };
 })();
