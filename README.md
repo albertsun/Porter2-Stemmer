@@ -21,5 +21,5 @@ by that regular expression and as a result, we got hopefulli.
 
 # Status
 
-As of Oct 22, 2012, PorterStemmer2 is 98.54% compliant.
+As of now, the stemmer is only partially implemented and should not be used.
 
