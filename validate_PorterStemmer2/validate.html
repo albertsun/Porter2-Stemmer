@@ -16,6 +16,31 @@
     </div>
 <script type="text/javascript" src="../PorterStemmer2.js"></script>
 <script type="text/javascript" src="ReferenceTable.js"></script>
+<script type="text/javascript" src="../jsSnowball_0.3/stemmer/src/Among.js"></script>
+<script type="text/javascript" src="../jsSnowball_0.3/stemmer/src/SnowballProgram.js"></script>
+<script type="text/javascript" src="../jsSnowball_0.3/stemmer/src/ext/EnglishStemmer.js"></script>
+<script>
+function Snowball(lng) {
+  var stemFactory = {
+    "EnglishStemmer": EnglishStemmer
+  }
+  var stemName = lng.substring(0, 1).toUpperCase()
+      + lng.substring(1).toLowerCase() + "Stemmer";
+  return new stemFactory[stemName]();
+}
+var stem = (function() {
+  var testStemmer = new Snowball("english");
+  return function(word) {
+    testStemmer.setCurrent(word);
+    testStemmer.stem();
+    return testStemmer.getCurrent();
+  };
+  // return f();
+  // testStemmer.setCurrent(word);
+  // testStemmer.stem();
+  // return testStemmer.getCurrent();
+}());
+</script>
 <script>
 
 function runSuite() {
@@ -82,12 +107,19 @@ function runSuite() {
   }
 }
 function debugOne(w) {
-  var stemmed = stemmer(w, true);
+  var stemmed = window.stemmer(w, true);
   console.log(stemmed);
   return stemmed;
 }
+function test_jsSnowball() {
+  window.stemmer = stem;
+  runSuite();
+  // debugOne("hopefully");
+  // console.log(stem("hopefully"));
+}
 // window.onload = debugOne("hopefully");
-window.onload = runSuite;
+// window.onload = runSuite;
+window.onload = test_jsSnowball;
 </script>
   </body>
 </html>
