@@ -72,7 +72,7 @@ var stemmer = (function(){
     // non-vowel other than w, x or Y and preceded by a non-vowel, or * (b) 
     // a vowel at the beginning of the word followed by a non-vowel. 
     short_syllable = Porter_RegExp.create([
-      non_vowel + "([^aeiouywx][aeiouy])",        // (a)
+      non_vowel + "([aeiouy][^aeiouywx])",        // (a)
       "^(" + vowel + non_vowel + ")"              // (b)
     ]);
 
@@ -81,12 +81,22 @@ var stemmer = (function(){
   // is computed in real time as the steps of the
   // algorithm are done
   function Word(init) {
-    String.call(this, init);
+    this.word = String.call(this, init);
   }
-  Word.prototype = String.prototype;
+  // Word.prototype = String.prototype;
 
+  Word.prototype.replace = function(a1,a2) {
+    this.word.replace(a1,a2);
+    return this;
+  }
+  Word.prototype.charAt = function(num) {
+    return this.word.charAt(num);
+  }
   Word.prototype.toString = function() {
     return this.word;
+  }
+  Word.prototype.match = function(regex) {
+    return this.word.match(regex);
   }
 
   Word.prototype.decompose = function() {
@@ -166,6 +176,7 @@ var stemmer = (function(){
 
   // Assume that 
   function longest_suffix(word, set) {
+    console.log(word,set);
     var 
       len = set.length,
       res,
@@ -187,11 +198,11 @@ var stemmer = (function(){
 
   // Implementors note: This is the start of the machinery
   return function (raw_word, debug) {
-
+    console.log(raw_word);
     // If the word has two letters or less, leave it as it is. 
     var two_letters_or_less = new RegExp("^" + letter + "{1,2}$"),
         word = new Word(raw_word);
-
+    console.log(word.toString());
     if (two_letters_or_less.test(word)) {
       debugFunction(
         "If the word has two letters or less, leave it as it is.",
@@ -202,6 +213,7 @@ var stemmer = (function(){
       return word;
     }
 
+
     // Remove initial ', if present.
     if (word.charAt(0) == "'") {
       word = word.slice(1);
@@ -211,6 +223,8 @@ var stemmer = (function(){
     // Set initial y, or y after a vowel, to Y
     word = word.replace(/y/, 'Y');
     word = word.replace(/([aeiouy])y/, "$1Y");
+
+    
 
     // then establish the regions R1 and R2
     var 
